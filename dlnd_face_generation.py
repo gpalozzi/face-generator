@@ -194,8 +194,28 @@ print('Max: ', scaled_img.max())
 import torch.nn as nn
 import torch.nn.functional as F
 
+# %%
+
+
+def conv(in_channels, out_channels, kernel_size=4, stride=2, padding=1, batch_norm=True):
+    """Creates a convolutional layer, with optional batch normalization.
+    kernel_size, stride and padding default values are set to reduce
+    the input image size by 2 (when the input size is a power of 2)
+    """
+    layers = []
+    conv_layer = nn.Conv2d(in_channels, out_channels,
+                           kernel_size, stride, padding, bias=False)
+
+    layers.append(conv_layer)
+
+    if batch_norm:
+        layers.append(nn.BatchNorm2d(out_channels))
+
+    return nn.Sequential(*layers)
 
 # %%
+
+
 class Discriminator(nn.Module):
 
     def __init__(self, conv_dim):
@@ -205,7 +225,19 @@ class Discriminator(nn.Module):
         """
         super(Discriminator, self).__init__()
 
-        # complete init function
+        self.conv_dim = conv_dim
+
+        # 32x32 input
+        # first layer, no batch_norm
+        self.conv1 = conv(3, conv_dim, batch_norm=False)
+        # 16x16 out
+        self.conv2 = conv(conv_dim, conv_dim * 2)
+        # 8x8 out
+        self.conv3 = conv(conv_dim * 2, conv_dim * 4)
+        # 4x4 out
+
+        # final, fully-connected layer
+        self.fc = nn.Linear(conv_dim * 4 * 4 * 4, 1)
 
     def forward(self, x):
         """
@@ -213,9 +245,16 @@ class Discriminator(nn.Module):
         :param x: The input to the neural network
         :return: Discriminator logits; the output of the neural network
         """
-        # define feedforward behavior
+        out = F.leaky_relu(self.conv1(x), 0.2)
+        out = F.leaky_relu(self.conv2(out), 0.2)
+        out = F.leaky_relu(self.conv3(out), 0.2)
 
-        return x
+        # flatten
+        out = out.view(-1, self.conv_dim * 4 * 4 * 4)
+
+        # final output layer
+        out = self.fc(out)
+        return out
 
 
 """
@@ -231,6 +270,25 @@ tests.test_discriminator(Discriminator)
 # #### Exercise: Complete the Generator class
 # * The inputs to the generator are vectors of some length `z_size`
 # * The output should be a image of shape `32x32x3`
+
+# %%
+
+
+def deconv(in_channels, out_channels, kernel_size=4, stride=2, padding=1, batch_norm=True):
+    """Creates a transposed-convolutional layer, with optional batch normalization.
+    """
+    # create a sequence of transpose + optional batch norm layers
+    layers = []
+    transpose_conv_layer = nn.ConvTranspose2d(in_channels, out_channels,
+                                              kernel_size, stride, padding, bias=False)
+    # append transpose convolutional layer
+    layers.append(transpose_conv_layer)
+
+    if batch_norm:
+        # append batchnorm layer
+        layers.append(nn.BatchNorm2d(out_channels))
+
+    return nn.Sequential(*layers)
 
 # %%
 
