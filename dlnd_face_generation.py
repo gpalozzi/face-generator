@@ -65,13 +65,12 @@ get_ipython().run_line_magic('matplotlib', 'inline')
 import torch
 from torchvision import datasets
 from torchvision import transforms
-
-
-# %%
+from torch.utils.data import DataLoader
 import os
 
 
-def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/'):
+# %%
+def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/celeba/'):
     """
     Batch the neural network data using DataLoader
     :param batch_size: The size of each batch; the number of images in a batch
@@ -85,7 +84,7 @@ def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/'):
                                     transforms.ToTensor()])
 
     # get training and test directories
-    image_path = os.path.join('./', data_dir, 'celeba')
+    image_path = os.path.join(os.getcwd(), data_dir)
     dataset = datasets.ImageFolder(image_path, transform)
 
     # create and return DataLoaders
@@ -106,9 +105,8 @@ def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/'):
 
 # %%
 # Define function hyperparameters
-batch_size = 16
+batch_size = 32
 img_size = 32
-
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 """
