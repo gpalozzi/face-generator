@@ -23,7 +23,7 @@
 
 # %%
 # can comment out after executing
-get_ipython().system('unzip processed_celeba_small.zip')
+# get_ipython().system('unzip processed_celeba_small.zip')
 
 
 # %%
@@ -68,6 +68,9 @@ from torchvision import transforms
 
 
 # %%
+import os
+
+
 def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/'):
     """
     Batch the neural network data using DataLoader
@@ -77,9 +80,19 @@ def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/'):
     :return: DataLoader with batched data
     """
 
-    # TODO: Implement function and return a dataloader
+    # Transform data into tensors of the correct size
+    transform = transforms.Compose([transforms.Resize(image_size),  # resize to 128x128
+                                    transforms.ToTensor()])
 
-    return None
+    # get training and test directories
+    image_path = os.path.join('./', data_dir, 'celeba')
+    dataset = datasets.ImageFolder(image_path, transform)
+
+    # create and return DataLoaders
+    loader = DataLoader(
+        dataset=dataset, batch_size=batch_size, shuffle=True)
+
+    return loader
 
 # %% [markdown]
 # ## Create a DataLoader
@@ -93,8 +106,8 @@ def get_dataloader(batch_size, image_size, data_dir='processed_celeba_small/'):
 
 # %%
 # Define function hyperparameters
-batch_size =
-img_size =
+batch_size = 16
+img_size = 32
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
