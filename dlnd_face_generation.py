@@ -380,7 +380,7 @@ def weights_init_normal(m):
             m.bias.data.fill_(0)
     # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
     elif classname.find('BatchNorm2d') != -1:
-        m.weight.data.normal_(1.0, init_gain)
+        m.weight.data.normal_(1.0, std_dev)
         m.bias.data.fill_(0.0)
 
 
@@ -415,9 +415,9 @@ def build_network(d_conv_dim, g_conv_dim, z_size):
 
 # %%
 # Define model hyperparams
-d_conv_dim =
-g_conv_dim =
-z_size =
+d_conv_dim = 32
+g_conv_dim = 32
+z_size = 100
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
@@ -473,16 +473,37 @@ else:
 def real_loss(D_out):
     '''Calculates how close discriminator outputs are to being real.
        param, D_out: discriminator logits
-       return: real loss'''
-    loss =
+       return: real loss
+    '''
+    batch_size = D_out.size(0)
+
+    labels = torch.ones(batch_size)  # real labels = 1
+    # move labels to GPU if available
+    if train_on_gpu:
+        labels = labels.cuda()
+    # binary cross entropy with logits loss
+    criterion = nn.BCEWithLogitsLoss()
+    # calculate loss
+    loss = criterion(D_out.squeeze(), labels)
     return loss
 
 
 def fake_loss(D_out):
     '''Calculates how close discriminator outputs are to being fake.
        param, D_out: discriminator logits
-       return: fake loss'''
-    loss =
+       return: fake loss
+    '''
+    batch_size = D_out.size(0)
+
+    labels = torch.zeros(batch_size)  # fake labels = 0
+
+    # move labels to GPU if available
+    if train_on_gpu:
+        labels = labels.cuda()
+    # binary cross entropy with logits loss
+    criterion = nn.BCEWithLogitsLoss()
+    # calculate loss
+    loss = criterion(D_out.squeeze(), labels)
     return loss
 
 # %% [markdown]
@@ -497,8 +518,14 @@ def fake_loss(D_out):
 import torch.optim as optim
 
 # Create optimizers for the discriminator D and generator G
-d_optimizer =
-g_optimizer =
+# params
+lr = 0.0002
+beta1 = 0.5
+beta2 = 0.999  # default value
+
+# Create optimizers for the discriminator and generator
+d_optimizer = optim.Adam(D.parameters(), lr, [beta1, beta2])
+g_optimizer = optim.Adam(G.parameters(), lr, [beta1, beta2])
 
 # %% [markdown]
 # ---
@@ -527,7 +554,8 @@ def train(D, G, n_epochs, print_every=50):
        param, G: the generator network
        param, n_epochs: number of epochs to train for
        param, print_every: when to print and record the models' losses
-       return: D and G losses'''
+       return: D and G losses
+    '''
 
     # move models to GPU
     if train_on_gpu:
@@ -556,15 +584,53 @@ def train(D, G, n_epochs, print_every=50):
             batch_size = real_images.size(0)
             real_images = scale(real_images)
 
+            if train_on_gpu:
+                real_images = real_images.cuda()
             # ===============================================
             #         YOUR CODE HERE: TRAIN THE NETWORKS
             # ===============================================
 
             # 1. Train the discriminator on real and fake images
-            d_loss =
+            d_optimizer.zero_grad()
+
+            d_real = D(real_images)
+            d_real_loss = real_loss(d_real)
+
+            # Generate fake images
+            z = np.random.uniform(-1, 1, size=(batch_size, z_size))
+            z = torch.from_numpy(z).float()
+
+            if train_on_gpu:
+                z = z.cuda()
+
+            fake_images = G(z)
+
+            # Compute the discriminator losses on fake images
+            d_fake = D(fake_images)
+            d_fake_loss = fake_loss(d_fake)
+
+            d_loss = d_real_loss + d_fake_loss
+            d_loss.backward()
+            d_optimizer.step()
 
             # 2. Train the generator with an adversarial loss
-            g_loss =
+            g_optimizer.zero_grad()
+
+            # Generate fake images
+            z = np.random.uniform(-1, 1, size=(batch_size, z_size))
+            z = torch.from_numpy(z).float()
+
+            if train_on_gpu:
+                z = z.cuda()
+
+            fake_images = G(z)
+
+            # Compute the discriminator losses on fake images
+            d_fake = D(fake_images)
+
+            g_loss = real_loss(d_fake)
+            g_loss.backward()
+            g_optimizer.step()
 
             # ===============================================
             #              END OF YOUR CODE
@@ -599,7 +665,7 @@ def train(D, G, n_epochs, print_every=50):
 
 # %%
 # set number of epochs
-n_epochs =
+n_epochs = 100
 
 
 """
