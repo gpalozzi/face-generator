@@ -665,7 +665,7 @@ def train(D, G, n_epochs, print_every=50):
 
 # %%
 # set number of epochs
-n_epochs = 100
+n_epochs = 200
 
 
 """
