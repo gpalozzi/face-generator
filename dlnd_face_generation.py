@@ -36,7 +36,7 @@ import pickle as pkl
 import matplotlib.pyplot as plt
 import numpy as np
 import problem_unittests as tests
-#import helper
+# import helper
 
 get_ipython().run_line_magic('matplotlib', 'inline')
 
@@ -281,11 +281,10 @@ def deconv(in_channels, out_channels, kernel_size=4, stride=2, padding=1, batch_
     layers = []
     transpose_conv_layer = nn.ConvTranspose2d(in_channels, out_channels,
                                               kernel_size, stride, padding, bias=False)
-    # append transpose convolutional layer
+
     layers.append(transpose_conv_layer)
 
     if batch_norm:
-        # append batchnorm layer
         layers.append(nn.BatchNorm2d(out_channels))
 
     return nn.Sequential(*layers)
@@ -303,7 +302,15 @@ class Generator(nn.Module):
         """
         super(Generator, self).__init__()
 
-        # complete init function
+        self.conv_dim = conv_dim
+
+        # first, fully-connected layer
+        self.fc = nn.Linear(z_size, conv_dim * 4 * 4 * 4)
+
+        # transpose conv layers
+        self.deconv1 = deconv(conv_dim * 4, conv_dim * 2)
+        self.deconv2 = deconv(conv_dim * 2, conv_dim)
+        self.deconv3 = deconv(conv_dim, 3, batch_norm=False)
 
     def forward(self, x):
         """
@@ -311,9 +318,20 @@ class Generator(nn.Module):
         :param x: The input to the neural network
         :return: A 32x32x3 Tensor image as output
         """
-        # define feedforward behavior
+        # fully-connected
+        out = self.fc(x)
+        # reshape to (batch_size, depth, 4, 4)
+        out = out.view(-1, self.conv_dim * 4, 4, 4)
 
-        return x
+        # hidden transpose conv layers + relu
+        out = F.relu(self.deconv1(out))
+        out = F.relu(self.deconv2(out))
+
+        # last layer + tanh activation
+        out = self.deconv3(out)
+        out = torch.tanh(out)
+
+        return out
 
 
 """
@@ -351,7 +369,19 @@ def weights_init_normal(m):
     # `Conv`, `BatchNorm2d`, `Linear`, etc.
     classname = m.__class__.__name__
 
-    # TODO: Apply initial weights to convolutional and linear layers
+    mean = 0
+    std_dev = 0.02
+
+    if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
+        # init weights with normal distribution
+        m.weight.data.normal_(mean, std_dev)
+
+        if hasattr(m, 'bias') and m.bias is not None:
+            m.bias.data.fill_(0)
+    # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+    elif classname.find('BatchNorm2d') != -1:
+        m.weight.data.normal_(1.0, init_gain)
+        m.bias.data.fill_(0.0)
 
 
 # %% [markdown]
