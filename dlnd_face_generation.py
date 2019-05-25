@@ -546,6 +546,7 @@ g_optimizer = optim.Adam(G.parameters(), lr, [beta1, beta2])
 # Keep in mind that, if you've moved your models to GPU, you'll also have to move any model inputs to GPU.
 
 # %%
+import helper
 
 
 def train(D, G, n_epochs, print_every=50):
@@ -643,6 +644,9 @@ def train(D, G, n_epochs, print_every=50):
                 # print discriminator and generator loss
                 print('Epoch [{:5d}/{:5d}] | d_loss: {:6.4f} | g_loss: {:6.4f}'.format(
                     epoch + 1, n_epochs, d_loss.item(), g_loss.item()))
+                # save models
+                helper.save_model('./discriminator', D)
+                helper.save_model('./generator', G)
 
         ## AFTER EACH EPOCH##
         # this code assumes your generator is named G, feel free to change the name
@@ -665,7 +669,12 @@ def train(D, G, n_epochs, print_every=50):
 
 # %%
 # set number of epochs
-n_epochs = 100
+n_epochs = 200
+
+# %%
+# load saved model
+# D = helper.load_model('./discriminator')
+# G = helper.load_model('./generator')
 
 
 """
